@@ -30,7 +30,7 @@ func DefaultConfig() Config {
 			ShutdownTimeoutSeconds: 10,
 		},
 		JWT: JWTConfig{
-			TokenExpirySeconds: 3600, // 1 hour
+			TokenExpirySeconds: 3600,
 		},
 	}
 }

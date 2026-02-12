@@ -10,9 +10,9 @@ const (
 
 type Asset struct {
 	ID            string        `json:"id"`
-	Type          string        `json:"type"` // "chart", "insight", "audience"
+	Type          string        `json:"type"`
 	Description   string        `json:"description"`
-	SourceAssetID string        `json:"source_asset_id,omitempty"` // when set, asset-deleted event can remove this favourite (avoids orphans)
+	SourceAssetID string        `json:"source_asset_id,omitempty"`
 	CreatedAt     time.Time     `json:"created_at"`
 	UpdatedAt     time.Time     `json:"updated_at"`
 	Chart         *ChartData    `json:"chart,omitempty"`
@@ -32,15 +32,15 @@ type InsightData struct {
 }
 
 type AudienceData struct {
-	Gender                string   `json:"gender"`
-	BirthCountry          string   `json:"birth_country"`
-	AgeGroups             string   `json:"age_groups"`
-	HoursSocialMediaDaily float64  `json:"hours_social_media_daily"`
-	PurchasesLastMonth    int      `json:"purchases_last_month"`
-	HoursSocialMedia      string   `json:"hours_social_media,omitempty"` // e.g. "1-2, 2-3" from catalog criteria
-	Purchases             string   `json:"purchases,omitempty"`          // e.g. "1-5, 6-10" from catalog criteria
-	SampleSize            int      `json:"sample_size,omitempty"`
-	TotalRespondents      int      `json:"total_respondents,omitempty"`
-	EstimatedReach        int      `json:"estimated_reach,omitempty"`
-	PopulationPercent     float64  `json:"population_percent,omitempty"`
+	Gender                string  `json:"gender"`
+	BirthCountry          string  `json:"birth_country"`
+	AgeGroups             string  `json:"age_groups"`
+	HoursSocialMediaDaily float64 `json:"hours_social_media_daily"`
+	PurchasesLastMonth    int     `json:"purchases_last_month"`
+	HoursSocialMedia      string  `json:"hours_social_media,omitempty"`
+	Purchases             string  `json:"purchases,omitempty"`
+	SampleSize            int     `json:"sample_size,omitempty"`
+	TotalRespondents      int     `json:"total_respondents,omitempty"`
+	EstimatedReach        int     `json:"estimated_reach,omitempty"`
+	PopulationPercent     float64 `json:"population_percent,omitempty"`
 }

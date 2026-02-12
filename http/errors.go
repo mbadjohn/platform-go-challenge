@@ -7,12 +7,12 @@ import (
 )
 
 const (
-	ErrCodeUnauthorized     = "UNAUTHORIZED"       // 401
-	ErrCodeForbidden        = "FORBIDDEN"          // 403
-	ErrCodeBadRequest       = "BAD_REQUEST"        // 400
-	ErrCodeNotFound         = "NOT_FOUND"          // 404
-	ErrCodeMethodNotAllowed = "METHOD_NOT_ALLOWED" // 405
-	ErrCodeInternal         = "INTERNAL_ERROR"     // 500
+	ErrCodeUnauthorized     = "UNAUTHORIZED"
+	ErrCodeForbidden        = "FORBIDDEN"
+	ErrCodeBadRequest       = "BAD_REQUEST"
+	ErrCodeNotFound         = "NOT_FOUND"
+	ErrCodeMethodNotAllowed = "METHOD_NOT_ALLOWED"
+	ErrCodeInternal         = "INTERNAL_ERROR"
 )
 
 type ErrorResponse struct {

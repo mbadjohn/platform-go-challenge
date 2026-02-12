@@ -5,7 +5,7 @@ import (
 )
 
 type FavouritesService struct {
-	repo        FavouritesRepository
+	repo         FavouritesRepository
 	assetCatalog AssetCatalogClient // optional: nil means no validation of source_asset_id
 }
 
