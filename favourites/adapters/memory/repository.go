@@ -12,15 +12,22 @@ import (
 
 var _ application.FavouritesRepository = (*Repository)(nil)
 
+type userAssetPair struct {
+	userID  string
+	assetID string
+}
+
 type Repository struct {
-	mu      sync.RWMutex
-	users   map[string]map[string]domain.Asset
-	counter int64
+	mu               sync.RWMutex
+	users            map[string]map[string]domain.Asset
+	sourceAssetIndex map[string][]userAssetPair
+	counter          int64
 }
 
 func NewRepository() *Repository {
 	return &Repository{
-		users: make(map[string]map[string]domain.Asset),
+		users:            make(map[string]map[string]domain.Asset),
+		sourceAssetIndex: make(map[string][]userAssetPair),
 	}
 }
 
@@ -81,6 +88,14 @@ func (r *Repository) Add(userID string, asset domain.Asset) domain.Asset {
 		r.users[userID] = make(map[string]domain.Asset)
 	}
 	r.users[userID][asset.ID] = asset
+	
+	if asset.SourceAssetID != "" {
+		r.sourceAssetIndex[asset.SourceAssetID] = append(
+			r.sourceAssetIndex[asset.SourceAssetID],
+			userAssetPair{userID: userID, assetID: asset.ID},
+		)
+	}
+	
 	return asset
 }
 
@@ -91,9 +106,15 @@ func (r *Repository) Remove(userID string, assetID string) bool {
 	if byID == nil {
 		return false
 	}
-	if _, ok := byID[assetID]; !ok {
+	asset, ok := byID[assetID]
+	if !ok {
 		return false
 	}
+	
+	if asset.SourceAssetID != "" {
+		r.removeFromIndex(asset.SourceAssetID, userID, assetID)
+	}
+	
 	delete(byID, assetID)
 	return true
 }
@@ -122,14 +143,32 @@ func (r *Repository) RemoveFavouritesBySourceAssetID(sourceAssetID string) int {
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	var removed int
-	for _, byID := range r.users {
-		for id, a := range byID {
-			if a.SourceAssetID == sourceAssetID {
-				delete(byID, id)
-				removed++
-			}
+	
+	pairs := r.sourceAssetIndex[sourceAssetID]
+	if len(pairs) == 0 {
+		return 0
+	}
+	
+	for _, pair := range pairs {
+		if byID := r.users[pair.userID]; byID != nil {
+			delete(byID, pair.assetID)
 		}
 	}
+	
+	removed := len(pairs)
+	delete(r.sourceAssetIndex, sourceAssetID)
 	return removed
+}
+
+func (r *Repository) removeFromIndex(sourceAssetID, userID, assetID string) {
+	pairs := r.sourceAssetIndex[sourceAssetID]
+	for i, pair := range pairs {
+		if pair.userID == userID && pair.assetID == assetID {
+			r.sourceAssetIndex[sourceAssetID] = append(pairs[:i], pairs[i+1:]...)
+			if len(r.sourceAssetIndex[sourceAssetID]) == 0 {
+				delete(r.sourceAssetIndex, sourceAssetID)
+			}
+			return
+		}
+	}
 }
