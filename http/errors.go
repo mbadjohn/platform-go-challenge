@@ -1,0 +1,54 @@
+package http
+
+import (
+	"encoding/json"
+	"log"
+	"net/http"
+)
+
+const (
+	ErrCodeUnauthorized     = "UNAUTHORIZED"       // 401
+	ErrCodeForbidden        = "FORBIDDEN"          // 403
+	ErrCodeBadRequest       = "BAD_REQUEST"        // 400
+	ErrCodeNotFound         = "NOT_FOUND"          // 404
+	ErrCodeMethodNotAllowed = "METHOD_NOT_ALLOWED" // 405
+	ErrCodeInternal         = "INTERNAL_ERROR"     // 500
+)
+
+type ErrorResponse struct {
+	Error struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	} `json:"error"`
+}
+
+func WriteError(w http.ResponseWriter, statusCode int, code, message string) {
+	writeErrorResponse(w, statusCode, code, message)
+}
+
+// WriteErrorWithLog logs the full error server-side; sends a generic message to the client (no internal details).
+func WriteErrorWithLog(w http.ResponseWriter, r *http.Request, statusCode int, code, publicMessage string, internalErr error) {
+	if internalErr != nil {
+		if r != nil {
+			log.Printf("[api] %s %s | %s (HTTP %d) | internal: %v", r.Method, r.URL.Path, code, statusCode, internalErr)
+		} else {
+			log.Printf("[api] %s (HTTP %d) | internal: %v", code, statusCode, internalErr)
+		}
+	}
+	writeErrorResponse(w, statusCode, code, publicMessage)
+}
+
+func writeErrorResponse(w http.ResponseWriter, statusCode int, code, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	_ = json.NewEncoder(w).Encode(newErrorResponse(code, message))
+}
+
+func newErrorResponse(code, message string) ErrorResponse {
+	return ErrorResponse{
+		Error: struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+		}{Code: code, Message: message},
+	}
+}
