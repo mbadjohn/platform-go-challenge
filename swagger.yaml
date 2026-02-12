@@ -9,6 +9,25 @@ servers:
     description: API v1 (current)
 
 paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: getHealth
+      description: Returns the service health status (no auth required).
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
   /version:
     get:
       summary: API version
@@ -375,6 +394,17 @@ components:
       type: object
       properties:
         removed: { type: integer }
+
+    HealthResponse:
+      type: object
+      description: Health check response
+      properties:
+        status: 
+          type: string
+          enum: [healthy, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
 
     VersionResponse:
       type: object

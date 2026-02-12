@@ -36,6 +36,21 @@ func (s *OpenAPIServer) GetVersion(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(resp)
 }
 
+func (s *OpenAPIServer) GetHealth(w http.ResponseWriter, r *http.Request) {
+	now := time.Now()
+	status := Healthy
+	statusCode := http.StatusOK
+	
+	resp := HealthResponse{
+		Status:    &status,
+		Timestamp: &now,
+	}
+	
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	_ = json.NewEncoder(w).Encode(resp)
+}
+
 func (s *OpenAPIServer) authorizeUser(w http.ResponseWriter, r *http.Request, pathUserID string) bool {
 	return AuthorizeUser(w, r, s.Verifier, pathUserID)
 }
@@ -204,6 +219,10 @@ func (s *OpenAPIServer) UpdateFavouriteDescription(w http.ResponseWriter, r *htt
 	desc := ""
 	if req.Description != nil {
 		desc = *req.Description
+		if len(desc) > 500 {
+			WriteError(w, http.StatusBadRequest, ErrCodeBadRequest, "description must be 500 characters or less")
+			return
+		}
 	}
 	updated, ok := s.UC.UpdateFavouriteDescription(string(userID), string(assetID), desc)
 	if !ok {
@@ -216,23 +235,62 @@ func (s *OpenAPIServer) UpdateFavouriteDescription(w http.ResponseWriter, r *htt
 }
 
 func validateAddFavouriteRequest(req AddFavouriteJSONRequestBody) string {
-	// When adding by reference (source_asset_id set), catalog supplies the payload; chart/insight/audience not required.
+	if req.Description != nil && len(*req.Description) > 500 {
+		return "description must be 500 characters or less"
+	}
+	
 	addByRef := req.SourceAssetId != nil && *req.SourceAssetId != ""
+	
 	switch req.Type {
 	case domain.AssetTypeChart:
 		if !addByRef && req.Chart == nil {
 			return "type \"chart\" requires a \"chart\" object (or set source_asset_id to add by reference)"
 		}
+		if req.Chart != nil {
+			if req.Chart.Title != nil && strings.TrimSpace(*req.Chart.Title) == "" {
+				return "chart title cannot be empty"
+			}
+			if req.Chart.XAxisTitle != nil && strings.TrimSpace(*req.Chart.XAxisTitle) == "" {
+				return "chart x_axis_title cannot be empty"
+			}
+			if req.Chart.YAxisTitle != nil && strings.TrimSpace(*req.Chart.YAxisTitle) == "" {
+				return "chart y_axis_title cannot be empty"
+			}
+			if req.Chart.Title != nil && len(*req.Chart.Title) > 200 {
+				return "chart title must be 200 characters or less"
+			}
+		}
+		
 	case domain.AssetTypeInsight:
 		if !addByRef && req.Insight == nil {
 			return "type \"insight\" requires an \"insight\" object (or set source_asset_id to add by reference)"
 		}
+		if req.Insight != nil {
+			if req.Insight.Text != nil && strings.TrimSpace(*req.Insight.Text) == "" {
+				return "insight text cannot be empty"
+			}
+			if req.Insight.Text != nil && len(*req.Insight.Text) > 2000 {
+				return "insight text must be 2000 characters or less"
+			}
+		}
+		
 	case domain.AssetTypeAudience:
 		if !addByRef && req.Audience == nil {
 			return "type \"audience\" requires an \"audience\" object (or set source_asset_id to add by reference)"
 		}
+		if req.Audience != nil {
+			if req.Audience.HoursSocialMediaDaily != nil && *req.Audience.HoursSocialMediaDaily < 0 {
+				return "audience hours_social_media_daily cannot be negative"
+			}
+			if req.Audience.HoursSocialMediaDaily != nil && *req.Audience.HoursSocialMediaDaily > 24 {
+				return "audience hours_social_media_daily cannot exceed 24 hours"
+			}
+			if req.Audience.PurchasesLastMonth != nil && *req.Audience.PurchasesLastMonth < 0 {
+				return "audience purchases_last_month cannot be negative"
+			}
+		}
+		
 	default:
-		// Primary type check is oneof validation in AddFavourite handler; this is a fallback.
 		return "invalid asset type: must be chart, insight, or audience"
 	}
 	return ""

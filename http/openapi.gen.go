@@ -18,6 +18,12 @@ const (
 	BearerAuthScopes = "bearerAuth.Scopes"
 )
 
+// Defines values for HealthResponseStatus.
+const (
+	Healthy   HealthResponseStatus = "healthy"
+	Unhealthy HealthResponseStatus = "unhealthy"
+)
+
 // AddFavouriteRequest defines model for AddFavouriteRequest.
 type AddFavouriteRequest struct {
 	Audience      *AudienceData `json:"audience,omitempty"`
@@ -85,6 +91,15 @@ type FavouriteResponse struct {
 	Type          *string       `json:"type,omitempty"`
 	UpdatedAt     *time.Time    `json:"updated_at,omitempty"`
 }
+
+// HealthResponse Health check response
+type HealthResponse struct {
+	Status    *HealthResponseStatus `json:"status,omitempty"`
+	Timestamp *time.Time            `json:"timestamp,omitempty"`
+}
+
+// HealthResponseStatus defines model for HealthResponse.Status.
+type HealthResponseStatus string
 
 // InsightData defines model for InsightData.
 type InsightData struct {
@@ -166,6 +181,9 @@ type ServerInterface interface {
 	// Issue JWT
 	// (POST /auth/token)
 	IssueToken(w http.ResponseWriter, r *http.Request)
+	// Health check
+	// (GET /health)
+	GetHealth(w http.ResponseWriter, r *http.Request)
 	// Internal event – asset deleted (optional X-Internal-Secret)
 	// (POST /internal/events/asset-deleted)
 	AssetDeleted(w http.ResponseWriter, r *http.Request)
@@ -203,6 +221,20 @@ func (siw *ServerInterfaceWrapper) IssueToken(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.IssueToken(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetHealth operation middleware
+func (siw *ServerInterfaceWrapper) GetHealth(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetHealth(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -562,6 +594,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	}
 
 	m.HandleFunc("POST "+options.BaseURL+"/auth/token", wrapper.IssueToken)
+	m.HandleFunc("GET "+options.BaseURL+"/health", wrapper.GetHealth)
 	m.HandleFunc("POST "+options.BaseURL+"/internal/events/asset-deleted", wrapper.AssetDeleted)
 	m.HandleFunc("GET "+options.BaseURL+"/users/{userID}/favourites", wrapper.ListFavourites)
 	m.HandleFunc("POST "+options.BaseURL+"/users/{userID}/favourites", wrapper.AddFavourite)

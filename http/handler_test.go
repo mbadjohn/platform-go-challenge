@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	stdhttp "net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -259,5 +260,199 @@ func TestOpenAPIServer_Add_SourceAssetNotFound(t *testing.T) {
 	}
 	if errResp.Error.Code != ErrCodeBadRequest {
 		t.Errorf("expected code BAD_REQUEST, got %s", errResp.Error.Code)
+	}
+}
+
+// TestOpenAPIServer_HealthEndpoint tests the health check endpoint.
+func TestOpenAPIServer_HealthEndpoint(t *testing.T) {
+	srv := setupTestServer(t)
+	defer srv.Close()
+
+	req, _ := stdhttp.NewRequest(stdhttp.MethodGet, srv.URL+testBasePath+"/health", nil)
+	resp, err := srv.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != stdhttp.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	var result struct {
+		Status    *string `json:"status"`
+		Timestamp *string `json:"timestamp"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if result.Status == nil || *result.Status != "healthy" {
+		t.Errorf("expected status 'healthy', got %v", result.Status)
+	}
+	if result.Timestamp == nil {
+		t.Error("expected timestamp to be present")
+	}
+}
+
+// TestOpenAPIServer_Add_DescriptionTooLong tests validation of description length.
+func TestOpenAPIServer_Add_DescriptionTooLong(t *testing.T) {
+	srv := setupTestServer(t)
+	defer srv.Close()
+
+	token := getToken(t, srv.URL, "u1")
+	longDesc := strings.Repeat("a", 501) // 501 characters
+	addBody := []byte(`{"type":"chart","description":"` + longDesc + `","chart":{"title":"T","x_axis_title":"X","y_axis_title":"Y","data":[1,2,3]}}`)
+	req, _ := stdhttp.NewRequest(stdhttp.MethodPost, srv.URL+testBasePath+"/users/u1/favourites", bytes.NewReader(addBody))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := srv.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != stdhttp.StatusBadRequest {
+		t.Fatalf("expected 400 for description too long, got %d", resp.StatusCode)
+	}
+}
+
+// TestOpenAPIServer_Add_ChartTitleEmpty tests validation of empty chart title.
+func TestOpenAPIServer_Add_ChartTitleEmpty(t *testing.T) {
+	srv := setupTestServer(t)
+	defer srv.Close()
+
+	token := getToken(t, srv.URL, "u1")
+	addBody := []byte(`{"type":"chart","chart":{"title":"   ","x_axis_title":"X","y_axis_title":"Y","data":[1,2,3]}}`)
+	req, _ := stdhttp.NewRequest(stdhttp.MethodPost, srv.URL+testBasePath+"/users/u1/favourites", bytes.NewReader(addBody))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := srv.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != stdhttp.StatusBadRequest {
+		t.Fatalf("expected 400 for empty chart title, got %d", resp.StatusCode)
+	}
+}
+
+// TestOpenAPIServer_Add_InsightTextEmpty tests validation of empty insight text.
+func TestOpenAPIServer_Add_InsightTextEmpty(t *testing.T) {
+	srv := setupTestServer(t)
+	defer srv.Close()
+
+	token := getToken(t, srv.URL, "u1")
+	addBody := []byte(`{"type":"insight","insight":{"text":"   "}}`)
+	req, _ := stdhttp.NewRequest(stdhttp.MethodPost, srv.URL+testBasePath+"/users/u1/favourites", bytes.NewReader(addBody))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := srv.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != stdhttp.StatusBadRequest {
+		t.Fatalf("expected 400 for empty insight text, got %d", resp.StatusCode)
+	}
+}
+
+// TestOpenAPIServer_Add_AudienceNegativeHours tests validation of negative hours.
+func TestOpenAPIServer_Add_AudienceNegativeHours(t *testing.T) {
+	srv := setupTestServer(t)
+	defer srv.Close()
+
+	token := getToken(t, srv.URL, "u1")
+	addBody := []byte(`{"type":"audience","audience":{"hours_social_media_daily":-1}}`)
+	req, _ := stdhttp.NewRequest(stdhttp.MethodPost, srv.URL+testBasePath+"/users/u1/favourites", bytes.NewReader(addBody))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := srv.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != stdhttp.StatusBadRequest {
+		t.Fatalf("expected 400 for negative hours, got %d", resp.StatusCode)
+	}
+}
+
+// TestOpenAPIServer_Add_AudienceExcessiveHours tests validation of hours > 24.
+func TestOpenAPIServer_Add_AudienceExcessiveHours(t *testing.T) {
+	srv := setupTestServer(t)
+	defer srv.Close()
+
+	token := getToken(t, srv.URL, "u1")
+	addBody := []byte(`{"type":"audience","audience":{"hours_social_media_daily":25}}`)
+	req, _ := stdhttp.NewRequest(stdhttp.MethodPost, srv.URL+testBasePath+"/users/u1/favourites", bytes.NewReader(addBody))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := srv.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != stdhttp.StatusBadRequest {
+		t.Fatalf("expected 400 for hours > 24, got %d", resp.StatusCode)
+	}
+}
+
+// TestOpenAPIServer_Add_AudienceNegativePurchases tests validation of negative purchases.
+func TestOpenAPIServer_Add_AudienceNegativePurchases(t *testing.T) {
+	srv := setupTestServer(t)
+	defer srv.Close()
+
+	token := getToken(t, srv.URL, "u1")
+	addBody := []byte(`{"type":"audience","audience":{"purchases_last_month":-5}}`)
+	req, _ := stdhttp.NewRequest(stdhttp.MethodPost, srv.URL+testBasePath+"/users/u1/favourites", bytes.NewReader(addBody))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := srv.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != stdhttp.StatusBadRequest {
+		t.Fatalf("expected 400 for negative purchases, got %d", resp.StatusCode)
+	}
+}
+
+// TestOpenAPIServer_UpdateDescription_TooLong tests validation when updating description.
+func TestOpenAPIServer_UpdateDescription_TooLong(t *testing.T) {
+	srv := setupTestServer(t)
+	defer srv.Close()
+
+	token := getToken(t, srv.URL, "u1")
+	// First add a favourite
+	addBody := []byte(`{"type":"chart","chart":{"title":"T","x_axis_title":"X","y_axis_title":"Y","data":[1,2,3]}}`)
+	req, _ := stdhttp.NewRequest(stdhttp.MethodPost, srv.URL+testBasePath+"/users/u1/favourites", bytes.NewReader(addBody))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := srv.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != stdhttp.StatusCreated {
+		t.Fatalf("add failed: expected 201, got %d", resp.StatusCode)
+	}
+	var addResult struct {
+		Id *string `json:"id"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&addResult); err != nil || addResult.Id == nil {
+		t.Fatalf("add: decode response: %v", err)
+	}
+	assetID := *addResult.Id
+
+	// Try to update with too long description
+	longDesc := strings.Repeat("b", 501)
+	patchBody := []byte(`{"description":"` + longDesc + `"}`)
+	req2, _ := stdhttp.NewRequest(stdhttp.MethodPatch, srv.URL+testBasePath+"/users/u1/favourites/"+assetID, bytes.NewReader(patchBody))
+	req2.Header.Set("Authorization", "Bearer "+token)
+	req2.Header.Set("Content-Type", "application/json")
+	resp2, err := srv.Client().Do(req2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp2.Body.Close()
+	if resp2.StatusCode != stdhttp.StatusBadRequest {
+		t.Fatalf("expected 400 for description too long, got %d", resp2.StatusCode)
 	}
 }
