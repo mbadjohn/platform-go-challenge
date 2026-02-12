@@ -1,0 +1,8 @@
+# Production environment
+# Always set JWT_SECRET via environment or secret manager
+server:
+  port: 8080
+  shutdown_timeout_seconds: 30
+
+jwt:
+  token_expiry_seconds: 900  # 15 minutes

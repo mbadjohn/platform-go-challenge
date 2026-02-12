@@ -1,0 +1,8 @@
+# Development environment
+# JWT secret: set JWT_SECRET env or uses default dev secret in code
+server:
+  port: 8080
+  shutdown_timeout_seconds: 10
+
+jwt:
+  token_expiry_seconds: 3600  # 1 hour
