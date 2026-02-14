@@ -105,8 +105,11 @@ func main() {
 	handler := httppkg.HandlerFromMuxWithBaseURL(openAPIServer, mux, "/v1")
 
 	srv := &http.Server{
-		Addr:    cfg.Addr(),
-		Handler: handler,
+		Addr:         cfg.Addr(),
+		Handler:      handler,
+		ReadTimeout:  cfg.ReadTimeout(),
+		WriteTimeout: cfg.WriteTimeout(),
+		IdleTimeout:  cfg.IdleTimeout(),
 	}
 
 	go func() {

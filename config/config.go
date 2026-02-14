@@ -16,6 +16,9 @@ type Config struct {
 type ServerConfig struct {
 	Port                   int `yaml:"port"`
 	ShutdownTimeoutSeconds int `yaml:"shutdown_timeout_seconds"`
+	ReadTimeoutSeconds     int `yaml:"read_timeout_seconds"`
+	WriteTimeoutSeconds    int `yaml:"write_timeout_seconds"`
+	IdleTimeoutSeconds     int `yaml:"idle_timeout_seconds"`
 }
 
 // JWTConfig: use JWT_SECRET from env in production (no default).
@@ -28,6 +31,9 @@ func DefaultConfig() Config {
 		Server: ServerConfig{
 			Port:                   8080,
 			ShutdownTimeoutSeconds: 10,
+			ReadTimeoutSeconds:     15,
+			WriteTimeoutSeconds:    15,
+			IdleTimeoutSeconds:     60,
 		},
 		JWT: JWTConfig{
 			TokenExpirySeconds: 3600,
@@ -62,6 +68,15 @@ func applyDefaults(c *Config) {
 	if c.Server.ShutdownTimeoutSeconds <= 0 {
 		c.Server.ShutdownTimeoutSeconds = 10
 	}
+	if c.Server.ReadTimeoutSeconds <= 0 {
+		c.Server.ReadTimeoutSeconds = 15
+	}
+	if c.Server.WriteTimeoutSeconds <= 0 {
+		c.Server.WriteTimeoutSeconds = 15
+	}
+	if c.Server.IdleTimeoutSeconds <= 0 {
+		c.Server.IdleTimeoutSeconds = 60
+	}
 	if c.JWT.TokenExpirySeconds <= 0 {
 		c.JWT.TokenExpirySeconds = 3600
 	}
@@ -77,4 +92,16 @@ func (c *Config) ShutdownTimeout() time.Duration {
 
 func (c *Config) TokenExpiry() time.Duration {
 	return time.Duration(c.JWT.TokenExpirySeconds) * time.Second
+}
+
+func (c *Config) ReadTimeout() time.Duration {
+	return time.Duration(c.Server.ReadTimeoutSeconds) * time.Second
+}
+
+func (c *Config) WriteTimeout() time.Duration {
+	return time.Duration(c.Server.WriteTimeoutSeconds) * time.Second
+}
+
+func (c *Config) IdleTimeout() time.Duration {
+	return time.Duration(c.Server.IdleTimeoutSeconds) * time.Second
 }

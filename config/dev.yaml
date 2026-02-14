@@ -3,6 +3,9 @@
 server:
   port: 8080
   shutdown_timeout_seconds: 10
+  read_timeout_seconds: 15
+  write_timeout_seconds: 15
+  idle_timeout_seconds: 60
 
 jwt:
   token_expiry_seconds: 3600  # 1 hour
