@@ -1,8 +1,10 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -40,12 +42,31 @@ func (s *OpenAPIServer) GetHealth(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	status := Healthy
 	statusCode := http.StatusOK
-	
+
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+
+	done := make(chan bool, 1)
+	go func() {
+		// Perform a lightweight query to verify system is working
+		_, _ = s.UC.ListFavouritesPaginated("health-check", 1, 0)
+		done <- true
+	}()
+
+	select {
+	case <-done:
+	case <-ctx.Done():
+		// Health check timed out or was cancelled
+		status = Unhealthy
+		statusCode = http.StatusServiceUnavailable
+		slog.Warn("health check failed", "error", "timeout")
+	}
+
 	resp := HealthResponse{
 		Status:    &status,
 		Timestamp: &now,
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	_ = json.NewEncoder(w).Encode(resp)
@@ -238,9 +259,9 @@ func validateAddFavouriteRequest(req AddFavouriteJSONRequestBody) string {
 	if req.Description != nil && len(*req.Description) > 500 {
 		return "description must be 500 characters or less"
 	}
-	
+
 	addByRef := req.SourceAssetId != nil && *req.SourceAssetId != ""
-	
+
 	switch req.Type {
 	case domain.AssetTypeChart:
 		if !addByRef && req.Chart == nil {
@@ -260,7 +281,7 @@ func validateAddFavouriteRequest(req AddFavouriteJSONRequestBody) string {
 				return "chart title must be 200 characters or less"
 			}
 		}
-		
+
 	case domain.AssetTypeInsight:
 		if !addByRef && req.Insight == nil {
 			return "type \"insight\" requires an \"insight\" object (or set source_asset_id to add by reference)"
@@ -273,7 +294,7 @@ func validateAddFavouriteRequest(req AddFavouriteJSONRequestBody) string {
 				return "insight text must be 2000 characters or less"
 			}
 		}
-		
+
 	case domain.AssetTypeAudience:
 		if !addByRef && req.Audience == nil {
 			return "type \"audience\" requires an \"audience\" object (or set source_asset_id to add by reference)"
@@ -289,7 +310,7 @@ func validateAddFavouriteRequest(req AddFavouriteJSONRequestBody) string {
 				return "audience purchases_last_month cannot be negative"
 			}
 		}
-		
+
 	default:
 		return "invalid asset type: must be chart, insight, or audience"
 	}
