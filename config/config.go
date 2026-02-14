@@ -20,6 +20,8 @@ type ServerConfig struct {
 	WriteTimeoutSeconds    int   `yaml:"write_timeout_seconds"`
 	IdleTimeoutSeconds     int   `yaml:"idle_timeout_seconds"`
 	MaxRequestBodyBytes    int64 `yaml:"max_request_body_bytes"`
+	RateLimitPerSecond     int   `yaml:"rate_limit_per_second"`
+	RateLimitBurst         int   `yaml:"rate_limit_burst"`
 }
 
 // JWTConfig: use JWT_SECRET from env in production (no default).
@@ -36,6 +38,8 @@ func DefaultConfig() Config {
 			WriteTimeoutSeconds:    15,
 			IdleTimeoutSeconds:     60,
 			MaxRequestBodyBytes:    1048576, // 1MB
+			RateLimitPerSecond:     100,
+			RateLimitBurst:         200,
 		},
 		JWT: JWTConfig{
 			TokenExpirySeconds: 3600,
@@ -81,6 +85,12 @@ func applyDefaults(c *Config) {
 	}
 	if c.Server.MaxRequestBodyBytes <= 0 {
 		c.Server.MaxRequestBodyBytes = 1048576 // 1MB
+	}
+	if c.Server.RateLimitPerSecond <= 0 {
+		c.Server.RateLimitPerSecond = 100
+	}
+	if c.Server.RateLimitBurst <= 0 {
+		c.Server.RateLimitBurst = 200
 	}
 	if c.JWT.TokenExpirySeconds <= 0 {
 		c.JWT.TokenExpirySeconds = 3600

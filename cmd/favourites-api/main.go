@@ -104,6 +104,7 @@ func main() {
 	}
 	handler := httppkg.HandlerFromMuxWithBaseURL(openAPIServer, mux, "/v1")
 	handler = httppkg.LimitRequestSize(handler, cfg.Server.MaxRequestBodyBytes)
+	handler = httppkg.RateLimitMiddleware(handler, cfg.Server.RateLimitPerSecond, cfg.Server.RateLimitBurst)
 
 	srv := &http.Server{
 		Addr:         cfg.Addr(),

@@ -13,6 +13,7 @@ const (
 	ErrCodeNotFound         = "NOT_FOUND"
 	ErrCodeMethodNotAllowed = "METHOD_NOT_ALLOWED"
 	ErrCodeInternal         = "INTERNAL_ERROR"
+	ErrCodeRateLimit        = "RATE_LIMIT_EXCEEDED"
 )
 
 type ErrorResponse struct {
