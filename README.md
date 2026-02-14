@@ -40,7 +40,7 @@ Favourites API implemented in **Go** with **hexagonal architecture** (ports and 
 
 ## Run locally
 
-**Prerequisites:** Go 1.24+ (or use Docker below).
+**Prerequisites:** Go 1.26+ (or use Docker below).
 
 From the repo root:
 
@@ -50,7 +50,7 @@ go run ./cmd/favourites-api
 
 Server listens on **http://localhost:8080**. API is under **`/v1`** (e.g. `POST /v1/auth/token`, `GET /v1/users/{userID}/favourites`). **Swagger UI** at **http://localhost:8080/swagger/**.
 
-Optional: set **`APP_ENV`** to `dev` (default), `staging`, or `production` to load config from `config/<env>.yaml`. Set **`JWT_SECRET`** for token signing (or use RSA keys via **`JWT_PRIVATE_KEY_PATH`**); if unset, a dev default is used (not for production).
+Optional: set **`APP_ENV`** to `dev` (default), `staging`, or `production` to load config from `config/<env>.yaml`. Set **`JWT_SECRET`** for token signing (or use RSA keys via **`JWT_PRIVATE_KEY_PATH`**); if unset, a dev default is used (not for production). Set **`LOG_LEVEL`** to `debug`, `info` (default), `warn`, or `error` to control log verbosity (uses `log/slog`).
 
 **Tests:**
 

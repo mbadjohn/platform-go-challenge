@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/flowchartsman/swaggerui"
@@ -18,7 +19,31 @@ import (
 	httppkg "github.com/gwi/platform-go-challenge/http"
 )
 
+func initLogger() {
+	levelStr := strings.ToLower(strings.TrimSpace(os.Getenv("LOG_LEVEL")))
+	if levelStr == "" {
+		levelStr = "info"
+	}
+	var level slog.Level
+	switch levelStr {
+	case "debug":
+		level = slog.LevelDebug
+	case "info":
+		level = slog.LevelInfo
+	case "warn", "warning":
+		level = slog.LevelWarn
+	case "error":
+		level = slog.LevelError
+	default:
+		level = slog.LevelInfo
+	}
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
+	slog.SetDefault(logger)
+}
+
 func main() {
+	initLogger()
+
 	env := os.Getenv("APP_ENV")
 	if env == "" {
 		env = "dev"
@@ -29,13 +54,15 @@ func main() {
 	}
 	cfg, err := config.Load(configPath)
 	if err != nil {
-		log.Fatalf("config: %v", err)
+		slog.Error("config load failed", "err", err)
+		os.Exit(1)
 	}
-	log.Printf("loaded config from %s (APP_ENV=%s)", configPath, env)
+	slog.Info("config loaded", "path", configPath, "env", env)
 
 	signer, verifier, err := httppkg.LoadJWTAuth()
 	if err != nil {
-		log.Fatalf("JWT auth: %v", err)
+		slog.Error("JWT auth init failed", "err", err)
+		os.Exit(1)
 	}
 	internalEventSecret := os.Getenv("INTERNAL_EVENT_SECRET")
 
@@ -63,7 +90,7 @@ func main() {
 			spec, err = os.ReadFile(alt)
 		}
 		if err != nil {
-			log.Printf("warning: could not load OpenAPI spec from %s: %v (Swagger UI disabled)", specPath, err)
+			slog.Warn("could not load OpenAPI spec, Swagger UI disabled", "path", specPath, "err", err)
 			spec = nil
 		}
 	}
@@ -83,9 +110,10 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("server listening on %s", cfg.Addr())
+		slog.Info("server listening", "addr", cfg.Addr())
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("server: %v", err)
+			slog.Error("server failed", "err", err)
+			os.Exit(1)
 		}
 	}()
 
@@ -93,11 +121,12 @@ func main() {
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
 
-	log.Print("shutting down server...")
+	slog.Info("shutting down server")
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout())
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("server shutdown: %v", err)
+		slog.Error("server shutdown failed", "err", err)
+		os.Exit(1)
 	}
-	log.Print("server stopped")
+	slog.Info("server stopped")
 }

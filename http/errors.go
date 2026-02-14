@@ -2,7 +2,7 @@ package http
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 )
 
@@ -30,9 +30,9 @@ func WriteError(w http.ResponseWriter, statusCode int, code, message string) {
 func WriteErrorWithLog(w http.ResponseWriter, r *http.Request, statusCode int, code, publicMessage string, internalErr error) {
 	if internalErr != nil {
 		if r != nil {
-			log.Printf("[api] %s %s | %s (HTTP %d) | internal: %v", r.Method, r.URL.Path, code, statusCode, internalErr)
+			slog.Error("api error", "method", r.Method, "path", r.URL.Path, "code", code, "status", statusCode, "err", internalErr)
 		} else {
-			log.Printf("[api] %s (HTTP %d) | internal: %v", code, statusCode, internalErr)
+			slog.Error("api error", "code", code, "status", statusCode, "err", internalErr)
 		}
 	}
 	writeErrorResponse(w, statusCode, code, publicMessage)

@@ -2,7 +2,7 @@ package memory
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -39,7 +39,7 @@ func (c *InMemoryCatalog) GetInsight(ctx context.Context, ownerID string, id str
 		return domain.Insight{}, false
 	}
 	if a.OwnerID != ownerID {
-		log.Printf("catalog: insight id=%s owner=%s forbidden (item owner=%s)", id, ownerID, a.OwnerID)
+		slog.Warn("catalog: insight forbidden, owner mismatch", "id", id, "requested_owner", ownerID, "item_owner", a.OwnerID)
 		return domain.Insight{}, false
 	}
 	return a, true
@@ -65,7 +65,7 @@ func (c *InMemoryCatalog) GetChart(ctx context.Context, ownerID string, id strin
 		return domain.Chart{}, false
 	}
 	if a.OwnerID != ownerID {
-		log.Printf("catalog: chart id=%s owner=%s forbidden (item owner=%s)", id, ownerID, a.OwnerID)
+		slog.Warn("catalog: chart forbidden, owner mismatch", "id", id, "requested_owner", ownerID, "item_owner", a.OwnerID)
 		return domain.Chart{}, false
 	}
 	return a, true
@@ -91,7 +91,7 @@ func (c *InMemoryCatalog) GetAudience(ctx context.Context, ownerID string, id st
 		return domain.Audience{}, false
 	}
 	if a.OwnerID != ownerID {
-		log.Printf("catalog: audience id=%s owner=%s forbidden (item owner=%s)", id, ownerID, a.OwnerID)
+		slog.Warn("catalog: audience forbidden, owner mismatch", "id", id, "requested_owner", ownerID, "item_owner", a.OwnerID)
 		return domain.Audience{}, false
 	}
 	return a, true
