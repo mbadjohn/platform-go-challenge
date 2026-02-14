@@ -14,11 +14,12 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port                   int `yaml:"port"`
-	ShutdownTimeoutSeconds int `yaml:"shutdown_timeout_seconds"`
-	ReadTimeoutSeconds     int `yaml:"read_timeout_seconds"`
-	WriteTimeoutSeconds    int `yaml:"write_timeout_seconds"`
-	IdleTimeoutSeconds     int `yaml:"idle_timeout_seconds"`
+	Port                   int   `yaml:"port"`
+	ShutdownTimeoutSeconds int   `yaml:"shutdown_timeout_seconds"`
+	ReadTimeoutSeconds     int   `yaml:"read_timeout_seconds"`
+	WriteTimeoutSeconds    int   `yaml:"write_timeout_seconds"`
+	IdleTimeoutSeconds     int   `yaml:"idle_timeout_seconds"`
+	MaxRequestBodyBytes    int64 `yaml:"max_request_body_bytes"`
 }
 
 // JWTConfig: use JWT_SECRET from env in production (no default).
@@ -34,6 +35,7 @@ func DefaultConfig() Config {
 			ReadTimeoutSeconds:     15,
 			WriteTimeoutSeconds:    15,
 			IdleTimeoutSeconds:     60,
+			MaxRequestBodyBytes:    1048576, // 1MB
 		},
 		JWT: JWTConfig{
 			TokenExpirySeconds: 3600,
@@ -76,6 +78,9 @@ func applyDefaults(c *Config) {
 	}
 	if c.Server.IdleTimeoutSeconds <= 0 {
 		c.Server.IdleTimeoutSeconds = 60
+	}
+	if c.Server.MaxRequestBodyBytes <= 0 {
+		c.Server.MaxRequestBodyBytes = 1048576 // 1MB
 	}
 	if c.JWT.TokenExpirySeconds <= 0 {
 		c.JWT.TokenExpirySeconds = 3600

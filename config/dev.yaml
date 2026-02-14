@@ -6,6 +6,7 @@ server:
   read_timeout_seconds: 15
   write_timeout_seconds: 15
   idle_timeout_seconds: 60
+  max_request_body_bytes: 1048576  # 1MB
 
 jwt:
   token_expiry_seconds: 3600  # 1 hour
